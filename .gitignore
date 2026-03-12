@@ -1,0 +1,17 @@
+# Backend
+backend/.env
+backend/data/
+backend/__pycache__/
+backend/*.pyc
+backend/.venv
+
+# Frontend
+frontend/.env
+frontend/node_modules/
+frontend/dist/
+
+# Shared
+.DS_Store
+*.log
+docker-compose.override.yml
+.pids

@@ -1,0 +1,113 @@
+import asyncio
+import threading
+import logging
+import os
+import uvicorn
+import time
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from config import settings
+from db import models, crud
+from api import routes, websocket
+from streamer.producer import start_producers, SYMBOLS
+from streamer.consumer import start_consumer
+from streamer.queue_manager import queue_manager
+
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("FinStreamPro")
+
+async def throughput_tracker_task():
+    """Background task to record throughput every second."""
+    while True:
+        queue_manager.record_throughput_tick()
+        await asyncio.sleep(1)
+
+async def metrics_snapshot_task():
+    """Background task to save queue health snapshot to DB every 10 seconds."""
+    while True:
+        await asyncio.sleep(10)
+        health = queue_manager.get_health()
+        await crud.save_snapshot(health)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    logger.info("Initializing FinStream Pro API...")
+    
+    # 1. Ensure data directory exists
+    os.makedirs(os.path.dirname(settings.DB_PATH), exist_ok=True)
+    
+    # 2. Init DB
+    await models.init_db(settings.DB_PATH)
+    
+    # 3. Create broadcast queue
+    broadcast_queue = asyncio.Queue()
+    
+    # 4. Get event loop
+    loop = asyncio.get_running_loop()
+    
+    # 5. Create shutdown event
+    shutdown_event = threading.Event()
+    
+    # 6. Start consumer
+    app.state.consumer = start_consumer(shutdown_event, broadcast_queue, loop)
+    
+    # 7. Start producers
+    app.state.producers = start_producers(shutdown_event)
+    
+    # 8. Start background tasks
+    app.state.tasks = [
+        asyncio.create_task(websocket.broadcaster(broadcast_queue)),
+        asyncio.create_task(metrics_snapshot_task()),
+        asyncio.create_task(throughput_tracker_task())
+    ]
+    
+    app.state.shutdown_event = shutdown_event
+    logger.info(f"FinStream Pro started — streaming {len(SYMBOLS)} symbols")
+    
+    yield
+    
+    # Shutdown logic
+    logger.info("Shutting down FinStream Pro...")
+    app.state.shutdown_event.set()
+    
+    for t in app.state.producers:
+        t.join(timeout=5)
+    app.state.consumer.join(timeout=5)
+    
+    for task in app.state.tasks:
+        task.cancel()
+        
+    logger.info("All threads stopped cleanly")
+
+app = FastAPI(title="FinStream Pro API", lifespan=lifespan)
+
+@app.middleware("http")
+async def add_process_time_header(request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    response.headers["X-Process-Time"] = str(time.time() - start)
+    return response
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["X-Process-Time"]
+)
+
+# Include routers
+app.include_router(routes.router)
+app.include_router(websocket.router)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
