@@ -3,9 +3,9 @@ import random
 import time
 import logging
 from typing import List
-from config import settings
-from schemas import Tick
-from streamer.queue_manager import queue_manager
+from backend.config import settings
+from backend.schemas import Tick
+from backend.streamer.queue_manager import queue_manager
 
 SYMBOLS = ["AAPL", "GOOGL", "BTC-USD", "ETH-USD", "EUR-USD"]
 BASE_PRICES = {

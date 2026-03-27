@@ -8,12 +8,21 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import settings
-from db import models, crud
-from api import routes, websocket
-from streamer.producer import start_producers, SYMBOLS
-from streamer.consumer import start_consumer
-from streamer.queue_manager import queue_manager
+import sys
+from pathlib import Path
+
+# Add the parent directory to sys.path to allow absolute imports from the 'backend' package
+# even when running from within the 'backend' directory itself.
+root_dir = str(Path(__file__).resolve().parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
+from backend.config import settings
+from backend.db import models, crud
+from backend.api import routes, websocket
+from backend.streamer.producer import start_producers, SYMBOLS
+from backend.streamer.consumer import start_consumer
+from backend.streamer.queue_manager import queue_manager
 
 # Configure logging
 logging.basicConfig(
@@ -44,24 +53,29 @@ async def lifespan(app: FastAPI):
     os.makedirs(os.path.dirname(settings.DB_PATH), exist_ok=True)
     
     # 2. Init DB
+    logger.info(f"DBInit: Initializing database at {settings.DB_PATH}")
     await models.init_db(settings.DB_PATH)
+    logger.info("DBInit: Database initialized with WAL mode")
     
     # 3. Create broadcast queue
     broadcast_queue = asyncio.Queue()
     
     # 4. Get event loop
     loop = asyncio.get_running_loop()
+    logger.info(f"FinStreamPro: Event loop acquired: {id(loop)}")
     
     # 5. Create shutdown event
     shutdown_event = threading.Event()
     
-    # 6. Start consumer
+    # 6. Start consumer BEFORE producers
+    logger.info("TickConsumer: Starting consumer thread")
     app.state.consumer = start_consumer(shutdown_event, broadcast_queue, loop)
     
     # 7. Start producers
     app.state.producers = start_producers(shutdown_event)
     
     # 8. Start background tasks
+    logger.info("WebSocketManager: Starting broadcaster task")
     app.state.tasks = [
         asyncio.create_task(websocket.broadcaster(broadcast_queue)),
         asyncio.create_task(metrics_snapshot_task()),
@@ -69,7 +83,7 @@ async def lifespan(app: FastAPI):
     ]
     
     app.state.shutdown_event = shutdown_event
-    logger.info(f"FinStream Pro started — streaming {len(SYMBOLS)} symbols")
+    logger.info("FinStreamPro: FinStream Pro startup complete")
     
     yield
     

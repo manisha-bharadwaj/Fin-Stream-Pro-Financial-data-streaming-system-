@@ -30,10 +30,8 @@ cd frontend && npm install && cd ..
 
 # Start Backend
 echo "🚀 Starting Backend on Port 8000..."
-cd backend
-python -m uvicorn main:app --reload --port 8000 &
+python -m uvicorn backend.main:app --reload --port 8000 &
 BACKEND_PID=$!
-cd ..
 
 # Start Frontend
 echo "🚀 Starting Frontend on Port 5173..."

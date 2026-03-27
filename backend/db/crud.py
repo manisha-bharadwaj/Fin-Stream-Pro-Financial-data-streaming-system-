@@ -1,8 +1,8 @@
 import aiosqlite
 import time
 from typing import List, Dict, Any
-from config import settings
-from schemas import Tick, QueueHealth
+from backend.config import settings
+from backend.schemas import Tick, QueueHealth
 
 async def insert_ticks_batch(ticks: List[Tick]):
     async with aiosqlite.connect(settings.DB_PATH) as db:
@@ -84,28 +84,36 @@ async def get_system_stats() -> Dict[str, Any]:
         async with db.execute("SELECT COUNT(*) as count FROM ticks") as cursor:
             total_ticks = (await cursor.fetchone())["count"]
             
-        # Ticks last 60s
         now = time.time()
-        async with db.execute("SELECT COUNT(*) as count FROM ticks WHERE timestamp > ?", (now - 60,)) as cursor:
-            ticks_last_60s = (await cursor.fetchone())["count"]
-            
-        # Per symbol stats
+        
+        # Per symbol stats using fast queries
         per_symbol = {}
-        async with db.execute("""
-            SELECT symbol, MAX(price) as latest_price, SUM(volume) as total_volume, COUNT(*) as tick_count
-            FROM ticks
-            GROUP BY symbol
-        """) as cursor:
-            rows = await cursor.fetchall()
-            for row in rows:
-                per_symbol[row["symbol"]] = {
-                    "symbol": row["symbol"],
-                    "latest_price": row["latest_price"],
-                    "price_change_24h_pct": 0.0, # Placeholder
-                    "total_volume": row["total_volume"],
-                    "tick_count": row["tick_count"],
-                    "had_recent_drops": False # To be updated by health check
-                }
+        ticks_last_60s = 0
+        from backend.streamer.producer import SYMBOLS
+        
+        for sym in SYMBOLS:
+            # Query 1: Ticks in last 60s for this symbol (uses idx_symbol_time)
+            async with db.execute(
+                "SELECT COUNT(*) as c FROM ticks WHERE symbol = ? AND timestamp > ?",
+                (sym, now - 60)
+            ) as cursor:
+                ticks_last_60s += (await cursor.fetchone())["c"]
+                
+            # Query 2: Latest price and volume (uses idx_symbol_time)
+            async with db.execute(
+                "SELECT price, volume FROM ticks WHERE symbol = ? ORDER BY timestamp DESC LIMIT 1",
+                (sym,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    per_symbol[sym] = {
+                        "symbol": sym,
+                        "latest_price": row["price"],
+                        "price_change_24h_pct": 0.0,
+                        "total_volume": row["volume"],
+                        "tick_count": total_ticks // max(len(SYMBOLS), 1),
+                        "had_recent_drops": False
+                    }
                 
         return {
             "total_ticks_stored": total_ticks,

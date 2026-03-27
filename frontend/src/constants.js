@@ -1,5 +1,5 @@
-export const API_BASE = import.meta.env.VITE_API_BASE || "/api"
-export const WS_URL = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws/stream`
+export const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api"
+export const WS_URL = import.meta.env.VITE_WS_URL || "ws://127.0.0.1:8000/ws/stream"
 export const SYMBOLS = ["AAPL", "GOOGL", "BTC-USD", "ETH-USD", "EUR-USD"]
 export const MAX_POINTS = 200    // max chart data points per symbol
 export const CHART_COLORS = {

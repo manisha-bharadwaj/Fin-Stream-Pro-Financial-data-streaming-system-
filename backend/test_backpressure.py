@@ -1,9 +1,9 @@
 import pytest
 import threading
 import time
-from streamer.queue_manager import QueueManager
-from schemas import Tick
-from config import settings
+from backend.streamer.queue_manager import QueueManager
+from backend.schemas import Tick
+from backend.config import settings
 
 def create_mock_tick(symbol="AAPL"):
     return Tick(

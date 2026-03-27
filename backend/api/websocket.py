@@ -4,8 +4,8 @@ import asyncio
 import time
 import logging
 
-from schemas import Tick, QueueHealth
-from streamer.queue_manager import queue_manager
+from backend.schemas import Tick, QueueHealth
+from backend.streamer.queue_manager import queue_manager
 
 router = APIRouter()
 logger = logging.getLogger("WebSocketManager")
@@ -25,7 +25,7 @@ class ConnectionManager:
             del self.active_connections[websocket]
             logger.info(f"WebSocket disconnected: {websocket.client}")
 
-    async def handle_subscription(self, websocket: WebSocket, msg: dict):
+    async def handle_message(self, websocket: WebSocket, msg: dict):
         action = msg.get("action")
         symbols = msg.get("symbols", [])
         
@@ -68,7 +68,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            await manager.handle_subscription(websocket, data)
+            await manager.handle_message(websocket, data)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:

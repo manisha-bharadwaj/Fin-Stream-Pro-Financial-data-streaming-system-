@@ -4,8 +4,8 @@ import time
 from collections import deque
 from typing import Optional, Dict
 import statistics
-from config import settings
-from schemas import Tick, QueueHealth
+from backend.config import settings
+from backend.schemas import Tick, QueueHealth
 
 class QueueManager:
     def __init__(self):

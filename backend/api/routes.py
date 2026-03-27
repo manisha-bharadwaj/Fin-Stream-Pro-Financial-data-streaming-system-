@@ -3,10 +3,10 @@ from fastapi.responses import JSONResponse
 from typing import List, Dict
 import time
 
-from db import crud
-from schemas import Tick, QueueHealth, SystemStats, OHLCVCandle
-from streamer.queue_manager import queue_manager
-from streamer.producer import SYMBOLS
+from backend.db import crud
+from backend.schemas import Tick, QueueHealth, SystemStats, OHLCVCandle
+from backend.streamer.queue_manager import queue_manager
+from backend.streamer.producer import SYMBOLS
 
 router = APIRouter(prefix="/api")
 
