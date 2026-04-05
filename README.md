@@ -9,11 +9,10 @@ The frontend provides a live dashboard to monitor dynamic price charts, system t
 
 ## Application Screenshots
 
-*(Note: Please save your images as `1.png`, `2.png`, and `3.png` inside an `assets` folder in the root directory to populate these)*
 
 ![Queue Health & Backpressure](assets/1.png)
-![Live Symbol Stats & Candlesticks](assets/2.png)
-![Real-Time Price Engine](assets/3.png)
+![Live Symbol Stats & Candlesticks](assets/3.png)
+![Real-Time Price Engine](assets/2.png)
 
 
 ## Tech Stack
