@@ -1,4 +1,4 @@
-# FinStream Pro — Financial Data Streaming System
+# FinStream Pro - Financial Data Streaming System
 
 ## Purpose and Functionality
 FinStream Pro is a real-time financial data streaming application. It helps to simulate live market data (like cryptocurrency and stock prices) so it can be analyzed easily. 
