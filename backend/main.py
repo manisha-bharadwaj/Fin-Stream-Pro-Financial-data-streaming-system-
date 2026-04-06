@@ -110,10 +110,12 @@ async def add_process_time_header(request, call_next):
     return response
 
 # CORS configuration
+allow_all = "*" in settings.ALLOWED_ORIGINS or getattr(settings, "ALLOWED_ORIGINS", []) == "*"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else settings.ALLOWED_ORIGINS,
+    allow_credentials=not allow_all,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["X-Process-Time"]
