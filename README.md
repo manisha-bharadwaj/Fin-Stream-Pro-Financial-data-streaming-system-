@@ -7,6 +7,10 @@ Additionally, this serves as an excellent operating systems and systems engineer
 
 The frontend provides a live dashboard to monitor dynamic price charts, system throughput, and queue health in real-time, leveraging WebSockets for instant updates.
 
+LIVE WORKING HERE:
+https://fin-stream-pro-financial-git-9df78b-manishas-projects-86ab0560.vercel.app/
+
+
 ## Application Screenshots
 
 
